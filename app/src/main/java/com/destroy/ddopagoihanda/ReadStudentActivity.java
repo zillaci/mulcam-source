@@ -8,9 +8,13 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.provider.MediaStore;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AlertDialog;
@@ -34,8 +38,12 @@ import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -50,12 +58,12 @@ public class ReadStudentActivity extends ActionBarActivity
 
     @Override
     public void onClick(View v) {
-        if(v == studentImage) {
+        if (v == studentImage) {
             Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
             try {
                 imageFile = File.createTempFile("student", ".jpg", Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES));
 
-                if(!imageFile.exists()) {
+                if (!imageFile.exists()) {
                     imageFile.createNewFile();
                 }
 
@@ -150,23 +158,22 @@ public class ReadStudentActivity extends ActionBarActivity
             StringBuffer sb = new StringBuffer();
             sb.append("[");
 
-            if(scoreList.size() <=10) {
+            if (scoreList.size() <= 10) {
                 int j = 0;
-                for(int i = scoreList.size(); i > 0; --i) {
-                    sb.append("[" + j +  ".");
-                    sb.append(scoreList.get(i-1).get("score"));
+                for (int i = scoreList.size(); i > 0; --i) {
+                    sb.append("[" + j + ".");
+                    sb.append(scoreList.get(i - 1).get("score"));
                     sb.append("]");
-                    if(i>1) sb.append(",");
+                    if (i > 1) sb.append(",");
                     j++;
                 }
-            }
-            else {
-                int j =0;
-                for(int i = 10; i >0; i--) {
+            } else {
+                int j = 0;
+                for (int i = 10; i > 0; i--) {
                     sb.append("[" + j + ".");
-                    sb.append(scoreList.get(i-1).get("score"));
+                    sb.append(scoreList.get(i - 1).get("score"));
                     sb.append("]");
-                    if(i> 1) sb.append(",");
+                    if (i > 1) sb.append(",");
                     j++;
                 }
             }
@@ -258,7 +265,7 @@ public class ReadStudentActivity extends ActionBarActivity
 
     @Override
     public void onTabChanged(String tabId) {
-        if(tabId.equals("tab2")) {
+        if (tabId.equals("tab2")) {
             webView.loadUrl("file:///android_asset/test.html");
         }
     }
@@ -362,12 +369,12 @@ public class ReadStudentActivity extends ActionBarActivity
     }
 
     private void initStudentImage(String photo) {
-        if(photo == null || photo.equals("")) {
+        if (photo == null || photo.equals("")) {
             return;
         }
 
         Bitmap bitmap = BitmapFactory.decodeFile(photo);
-        if(bitmap == null) {
+        if (bitmap == null) {
             return;
         }
 
@@ -394,23 +401,23 @@ public class ReadStudentActivity extends ActionBarActivity
         TextView tv1 = (TextView) rootItem.findViewById(R.id.read_list_score);
         TextView tv2 = (TextView) rootItem.findViewById(R.id.read_list_date);
 
-        String contentBody ="score:" + tv1.getText().toString() + "-" + tv2.getText().toString();
+        String contentBody = "score:" + tv1.getText().toString() + "-" + tv2.getText().toString();
         switch (id) {
             case R.id.menu_read_sms:
                 String phoneNumber = phoneView.getText().toString();
 
-                if(phoneNumber == null || phoneNumber.equals("")) {
+                if (phoneNumber == null || phoneNumber.equals("")) {
                     break;
                 }
                 intent.setAction(Intent.ACTION_SENDTO);
                 intent.setData(Uri.parse("smsto:" + phoneNumber));
-                intent.putExtra("sms_body",  contentBody);
+                intent.putExtra("sms_body", contentBody);
 
                 break;
 
             case R.id.menu_read_email:
                 String email = emailView.getText().toString();
-                if(email == null || email.equals("")) {
+                if (email == null || email.equals("")) {
                     break;
                 }
                 intent.setAction(Intent.ACTION_SEND);
@@ -422,15 +429,91 @@ public class ReadStudentActivity extends ActionBarActivity
                 break;
 
             case R.id.menu_read_server:
+                if (scoreList != null && scoreList.size() > 0) {
+                    HashMap<String, String> map = scoreList.get(0);
+                    NetworkThread t = new NetworkThread(map.get("score"), map.get("date"));
+                    t.start();
+                }
+
                 break;
         }
 
-        if(intent.getAction() != null && !intent.getAction().equals("")) {
+        if (intent.getAction() != null && !intent.getAction().equals("")) {
             startActivity(intent);
         }
 
         return super.onOptionsItemSelected(item);
     }
+
+    class NetworkThread extends Thread {
+        String score;
+        String date;
+
+        public NetworkThread(String score, String date) {
+            this.score = score;
+            this.date = date;
+        }
+
+        @Override
+        public void run() {
+            Message message = new Message();
+            ConnectivityManager manager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            NetworkInfo wifiInfo = manager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+            NetworkInfo mobileInfo = manager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+            if (wifiInfo.isConnected() || mobileInfo.isConnected()) {
+                try {
+                    URL url = new URL("http://192.168.43.24:8080/myserver.jsp?score=" + score + "&date=" + date);
+                    HttpURLConnection http = (HttpURLConnection) url.openConnection();
+                    http.setConnectTimeout(10000);
+                    http.setReadTimeout(10000);
+                    http.setDoInput(true);
+
+                    http.connect();
+
+                    BufferedReader in = new BufferedReader(new InputStreamReader(http.getInputStream()));
+                    String line = null;
+                    StringBuffer sb = new StringBuffer();
+                    while ((line = in.readLine()) != null) {
+                        sb.append(line);
+                    }
+                    String response = sb.toString().trim();
+                    if (response != null && response.equals("ok")) {
+                        message.what = 200;
+                    } else {
+                        message.what = 2;//서버 오류
+                    }
+                    in.close();
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    message.what = 0;//오류..
+                }
+            } else {
+                message.what = 1;//network 불가상황
+            }
+
+            handler.sendMessage(message);
+
+        }
+    }
+
+    Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            String message = "";
+            if (msg.what == 0) {
+                message = "network error";
+            } else if (msg.what == 1) {
+                message = "network offline";
+            } else if (msg.what == 2) {
+                message = "server error";
+            } else if (msg.what == 200) {
+                message = "ok~~~";
+            }
+            Toast t = Toast.makeText(ReadStudentActivity.this, message, Toast.LENGTH_SHORT);
+            t.show();
+        }
+    };
 
     private class MyImageGetter implements Html.ImageGetter {
 
@@ -449,7 +532,7 @@ public class ReadStudentActivity extends ActionBarActivity
 
         @Override
         public void onClick(DialogInterface dialog, int which) {
-            if(which == DialogInterface.BUTTON_POSITIVE) {
+            if (which == DialogInterface.BUTTON_POSITIVE) {
                 long date = System.currentTimeMillis();
                 String score = addScoreView.getText().toString();
 
@@ -464,7 +547,7 @@ public class ReadStudentActivity extends ActionBarActivity
                 tabHost.setCurrentTab(0);
                 scoreView.setScore(Integer.valueOf(score));
 
-                HashMap<String, String> map=new HashMap<>();
+                HashMap<String, String> map = new HashMap<>();
                 map.put("score", score);
                 map.put("date", new SimpleDateFormat("yyyy-MM-dd").format(new Date(date)));
 
@@ -478,8 +561,8 @@ public class ReadStudentActivity extends ActionBarActivity
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if(requestCode == PICTURE_REQUEST && resultCode == RESULT_OK) {
-            if(imageFile == null) {
+        if (requestCode == PICTURE_REQUEST && resultCode == RESULT_OK) {
+            if (imageFile == null) {
                 return;
             }
 
