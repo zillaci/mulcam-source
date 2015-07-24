@@ -55,60 +55,66 @@ public class ReadStudentActivity extends ActionBarActivity
 
     final static int PICTURE_REQUEST = 100;
     File imageFile;
-
-    @Override
-    public void onClick(View v) {
-        if (v == studentImage) {
-            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            try {
-                imageFile = File.createTempFile("student", ".jpg", Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES));
-
-                if (!imageFile.exists()) {
-                    imageFile.createNewFile();
-                }
-
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(imageFile));
-                startActivityForResult(intent, PICTURE_REQUEST);
-            } catch (IOException e) {
-                Log.e("mylog", e.getMessage());
+    WebView webView;
+    Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            String message = "";
+            if (msg.what == 0) {
+                message = "network error";
+            } else if (msg.what == 1) {
+                message = "network offline";
+            } else if (msg.what == 2) {
+                message = "server error";
+            } else if (msg.what == 200) {
+                message = "ok~~~";
             }
+            Toast t = Toast.makeText(ReadStudentActivity.this, message, Toast.LENGTH_SHORT);
+            t.show();
         }
-    }
-
-    public enum Tabs {
-        SCORE_LIST("scoreList"),
-        SCORE_ADD("scoreAdd"),
-        SCORE_CHART("scoreChart"),
-        SCORE_MEMO("scoreMemo");
-
-        private final String tabName;
-
-        Tabs(String tabName) {
-            this.tabName = tabName;
-        }
-
-        public String getTabName() {
-            return tabName;
-        }
-    }
-
+    };
     private ImageView studentImage;
     private TextView nameView;
     private TextView phoneView;
     private TextView emailView;
-    WebView webView;
-
     private TabHost tabHost;
-
     private int studentId = 1;
-
     private TextView addScoreView;
     private Button btn1, btn2, btn3, btn4, btn5, btn6, btn7, btn8, btn9, btn0, btnBack, btnAdd;
-
     private MyView scoreView;
     private ListView listView;
     private ArrayList<HashMap<String, String>> scoreList;
     private SimpleAdapter sa;
+    DialogInterface.OnClickListener dialogListener = new DialogInterface.OnClickListener() {
+
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            if (which == DialogInterface.BUTTON_POSITIVE) {
+                long date = System.currentTimeMillis();
+                String score = addScoreView.getText().toString();
+
+                DBHelper helper = new DBHelper(ReadStudentActivity.this, "studentdb", null, DBHelper.DATABASE_VERSION);
+                SQLiteDatabase db = helper.getWritableDatabase();
+
+                db.execSQL("insert into tb_score (student_id, date, score) values(?, ?, ?)",
+                        new String[]{String.valueOf(studentId), String.valueOf(date), score});
+                db.close();
+
+                addScoreView.setText("0");
+                tabHost.setCurrentTab(0);
+                scoreView.setScore(Integer.valueOf(score));
+
+                HashMap<String, String> map = new HashMap<>();
+                map.put("score", score);
+                map.put("date", new SimpleDateFormat("yyyy-MM-dd").format(new Date(date)));
+
+                scoreList.add(0, map);
+                sa.notifyDataSetChanged();
+                listView.setSelection(0);
+            }
+
+        }
+    };
     View.OnClickListener addScoreListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
@@ -152,35 +158,22 @@ public class ReadStudentActivity extends ActionBarActivity
         }
     };
 
-    public class JavascriptTest {
-        @JavascriptInterface
-        public String getWebData() {
-            StringBuffer sb = new StringBuffer();
-            sb.append("[");
+    @Override
+    public void onClick(View v) {
+        if (v == studentImage) {
+            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            try {
+                imageFile = File.createTempFile("student", ".jpg", Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES));
 
-            if (scoreList.size() <= 10) {
-                int j = 0;
-                for (int i = scoreList.size(); i > 0; --i) {
-                    sb.append("[" + j + ".");
-                    sb.append(scoreList.get(i - 1).get("score"));
-                    sb.append("]");
-                    if (i > 1) sb.append(",");
-                    j++;
+                if (!imageFile.exists()) {
+                    imageFile.createNewFile();
                 }
-            } else {
-                int j = 0;
-                for (int i = 10; i > 0; i--) {
-                    sb.append("[" + j + ".");
-                    sb.append(scoreList.get(i - 1).get("score"));
-                    sb.append("]");
-                    if (i > 1) sb.append(",");
-                    j++;
-                }
+
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(imageFile));
+                startActivityForResult(intent, PICTURE_REQUEST);
+            } catch (IOException e) {
+                Log.e("mylog", e.getMessage());
             }
-
-            sb.append("]");
-
-            return sb.toString();
         }
     }
 
@@ -445,6 +438,75 @@ public class ReadStudentActivity extends ActionBarActivity
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == PICTURE_REQUEST && resultCode == RESULT_OK) {
+            if (imageFile == null) {
+                return;
+            }
+
+            DBHelper helper = new DBHelper(this, "studentdb", null, DBHelper.DATABASE_VERSION);
+            SQLiteDatabase db = helper.getWritableDatabase();
+
+            db.execSQL("update tb_student set photo=? where _id=?",
+                    new String[]{imageFile.getAbsolutePath(), String.valueOf(studentId)});
+
+            db.close();
+
+            Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
+            studentImage.setImageBitmap(bitmap);
+        }
+    }
+
+    public enum Tabs {
+        SCORE_LIST("scoreList"),
+        SCORE_ADD("scoreAdd"),
+        SCORE_CHART("scoreChart"),
+        SCORE_MEMO("scoreMemo");
+
+        private final String tabName;
+
+        Tabs(String tabName) {
+            this.tabName = tabName;
+        }
+
+        public String getTabName() {
+            return tabName;
+        }
+    }
+
+    public class JavascriptTest {
+        @JavascriptInterface
+        public String getWebData() {
+            StringBuffer sb = new StringBuffer();
+            sb.append("[");
+
+            if (scoreList.size() <= 10) {
+                int j = 0;
+                for (int i = scoreList.size(); i > 0; --i) {
+                    sb.append("[" + j + ".");
+                    sb.append(scoreList.get(i - 1).get("score"));
+                    sb.append("]");
+                    if (i > 1) sb.append(",");
+                    j++;
+                }
+            } else {
+                int j = 0;
+                for (int i = 10; i > 0; i--) {
+                    sb.append("[" + j + ".");
+                    sb.append(scoreList.get(i - 1).get("score"));
+                    sb.append("]");
+                    if (i > 1) sb.append(",");
+                    j++;
+                }
+            }
+
+            sb.append("]");
+
+            return sb.toString();
+        }
+    }
+
     class NetworkThread extends Thread {
         String score;
         String date;
@@ -497,24 +559,6 @@ public class ReadStudentActivity extends ActionBarActivity
         }
     }
 
-    Handler handler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            String message = "";
-            if (msg.what == 0) {
-                message = "network error";
-            } else if (msg.what == 1) {
-                message = "network offline";
-            } else if (msg.what == 2) {
-                message = "server error";
-            } else if (msg.what == 200) {
-                message = "ok~~~";
-            }
-            Toast t = Toast.makeText(ReadStudentActivity.this, message, Toast.LENGTH_SHORT);
-            t.show();
-        }
-    };
-
     private class MyImageGetter implements Html.ImageGetter {
 
         @Override
@@ -525,57 +569,6 @@ public class ReadStudentActivity extends ActionBarActivity
                 return dr;
             }
             return null;
-        }
-    }
-
-    DialogInterface.OnClickListener dialogListener = new DialogInterface.OnClickListener() {
-
-        @Override
-        public void onClick(DialogInterface dialog, int which) {
-            if (which == DialogInterface.BUTTON_POSITIVE) {
-                long date = System.currentTimeMillis();
-                String score = addScoreView.getText().toString();
-
-                DBHelper helper = new DBHelper(ReadStudentActivity.this, "studentdb", null, DBHelper.DATABASE_VERSION);
-                SQLiteDatabase db = helper.getWritableDatabase();
-
-                db.execSQL("insert into tb_score (student_id, date, score) values(?, ?, ?)",
-                        new String[]{String.valueOf(studentId), String.valueOf(date), score});
-                db.close();
-
-                addScoreView.setText("0");
-                tabHost.setCurrentTab(0);
-                scoreView.setScore(Integer.valueOf(score));
-
-                HashMap<String, String> map = new HashMap<>();
-                map.put("score", score);
-                map.put("date", new SimpleDateFormat("yyyy-MM-dd").format(new Date(date)));
-
-                scoreList.add(0, map);
-                sa.notifyDataSetChanged();
-                listView.setSelection(0);
-            }
-
-        }
-    };
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == PICTURE_REQUEST && resultCode == RESULT_OK) {
-            if (imageFile == null) {
-                return;
-            }
-
-            DBHelper helper = new DBHelper(this, "studentdb", null, DBHelper.DATABASE_VERSION);
-            SQLiteDatabase db = helper.getWritableDatabase();
-
-            db.execSQL("update tb_student set photo=? where _id=?",
-                    new String[]{imageFile.getAbsolutePath(), String.valueOf(studentId)});
-
-            db.close();
-
-            Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
-            studentImage.setImageBitmap(bitmap);
         }
     }
 }

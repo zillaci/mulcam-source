@@ -34,6 +34,8 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
     ListView listView;
     ArrayList<StudentVO> data;
     private SimpleCursorAdapter mAdapter;
+    private SearchView searchView;
+    private double initTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,8 +69,6 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
 
         db.close();
     }
-
-    private SearchView searchView;
 
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     @Override
@@ -160,8 +160,6 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
 
         return super.onOptionsItemSelected(item);
     }
-
-    private double initTime;
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
