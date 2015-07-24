@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+
+    <ImageView
+        android:id="@+id/main_item_student_image"
+        android:layout_width="150px"
+        android:layout_height="150px"
+        android:src="@drawable/ic_student_small"
+        android:clickable="true"
+        android:maxWidth="150px"
+        android:maxHeight="150px"
+        android:adjustViewBounds="true"/>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingLeft="20dp">
+        <TextView
+            android:id="@+id/main_item_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textSize="15dp"/>
+        <TextView
+            android:id="@+id/main_item_score"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            />
+    </LinearLayout>
+    <ImageView
+        android:id="@+id/main_item_contact"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/icon_call_contact"
+        android:clickable="true"
+        android:maxWidth="100px"
+        android:maxHeight="100px"
+        android:adjustViewBounds="true"
+        android:layout_gravity="center_vertical"/>
+
+</LinearLayout>

@@ -1,0 +1,30 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.destroy.ddopagoihanda.ReadStudentActivity">
+
+    <item
+        android:id="@+id/action_settings"
+        android:title="@string/action_settings"
+        android:icon="@android:drawable/ic_menu_manage"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menu_read_sms"
+        android:title="SMS"
+        app:showAsAction="never"
+        />
+
+    <item
+        android:id="@+id/menu_read_email"
+        android:title="EMAIL"
+        app:showAsAction="never"
+        />
+
+    <item
+        android:id="@+id/menu_read_server"
+        android:title="SERVER"
+        app:showAsAction="never"
+        />
+
+</menu>

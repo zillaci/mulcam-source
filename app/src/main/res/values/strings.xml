@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">DDopagoihanda</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_read_student">ReadStudentActivity</string>
+    <string name="title_activity_add_student">AddStudentActivity</string>
+    <string name="add_name_null">입력안했자나</string>
+    <string name="what_the_fuck">what the fuck</string>
+    <string name="read_add_score_over_score">100 over ham</string>
+    <string name="main_back_end">exit? really?</string>
+    <string name="main_menu_search">Search</string>
+    <string name="main_search_hint">input search string</string>
+    <string name="read_add_score_dialog_message">really? save? call?</string>
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="main_list_phone_error">you!! no phone number!! you!!</string>
+</resources>
